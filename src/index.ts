@@ -17,9 +17,9 @@ const ERC20_ABI = [
 const program = new Command();
 
 program
-  .name('drain-wallet')
-  .description('Drain all tokens and native balance from an EOA across EVM chains')
-  .requiredOption('-k, --private-key <key>', 'Private key of the EOA to drain')
+  .name('sweep-wallet')
+  .description('Sweep all token and native balances from an EOA across EVM chains to a single destination')
+  .requiredOption('-k, --private-key <key>', 'Private key of the EOA to sweep')
   .requiredOption('-o, --out <address>', 'Destination address to receive funds')
   .option('--dry-run', 'Simulate actions without sending transactions', false)
   .option('--force', 'Skip confirmation prompt and proceed with transfers', false)
@@ -59,13 +59,13 @@ function getRpcForChain(chain: any, rpcs: any): string | null {
   return null;
 }
 
-async function dryRunDrain(chain: any, rpcUrl: string, tokens: any[], wallet: Wallet, outAddress: string) {
+async function dryRunSweep(chain: any, rpcUrl: string, tokens: any[], wallet: Wallet, outAddress: string) {
   const provider = new JsonRpcProvider(rpcUrl);
   const connectedWallet = wallet.connect(provider);
   const address = await connectedWallet.getAddress();
   console.log(`\n[${chain.chainId}]`);
   console.log(`  Wallet: ${address}`);
-  // Drain non-native tokens first
+  // Sweep non-native tokens first
   if (!opts.skipErc20) {
     for (const token of tokens.filter((t: any) => !t.isNative)) {
       try {
@@ -82,7 +82,7 @@ async function dryRunDrain(chain: any, rpcUrl: string, tokens: any[], wallet: Wa
       }
     }
   }
-  // Drain native token
+  // Sweep native token
   try {
     const nativeToken = tokens.find((t: any) => t.isNative);
     const balance: bigint = await provider.getBalance(address);
@@ -113,7 +113,7 @@ async function dryRunDrain(chain: any, rpcUrl: string, tokens: any[], wallet: Wa
 
 async function confirmProceed(chains: any[], outAddress: string) {
   const rl = readline.createInterface({ input, output });
-  console.log('\nYou are about to drain the following chains:');
+  console.log('\nYou are about to sweep the following chains:');
   for (const chain of chains) {
     console.log(`- ${chain.chainId}`);
   }
@@ -221,7 +221,7 @@ async function transferAll(chain: any, rpcUrl: string, tokens: any[], wallet: Wa
       }
       const tokens = Object.values(chain.assets).map((asset => asset));
       if (opts.dryRun) {
-        await dryRunDrain(chain, rpcUrl, tokens, wallet, opts.out);
+        await dryRunSweep(chain, rpcUrl, tokens, wallet, opts.out);
       } else {
         if (!opts.force) {
           const confirmed = await confirmProceed(evmChains, opts.out);

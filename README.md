@@ -1,6 +1,8 @@
-# Wallet Drainer CLI
+# EVM Wallet Sweeper
 
-A CLI tool to automatically drain all tokens and native balances from an EOA (Externally Owned Account) across multiple EVM-compatible chains, sending all funds to a specified output address.
+A CLI for decommissioning operational wallets. Sweeps all token and native balances from an EOA (Externally Owned Account) across every EVM chain in the shared chain config into a single destination address — with a dry-run mode, a confirmation prompt, and a max-gas-price guard.
+
+Built to retire and consolidate operational wallets safely: rotating a key, winding down a deployment, or collecting scattered balances back to one address without checking twenty explorers by hand.
 
 ## Features
 - 🔗 **Multi-chain**: Supports all EVM chains defined in [everclear.json](https://raw.githubusercontent.com/connext/chaindata/main/everclear.json)
@@ -52,7 +54,7 @@ yarn start --private-key <PRIVATE_KEY> --out <DEST_ADDRESS> --skip-erc20
 ```
 
 ## CLI Options
-- `-k, --private-key <key>`: Private key of the EOA to drain (**required**)
+- `-k, --private-key <key>`: Private key of the EOA to sweep (**required**)
 - `-o, --out <address>`: Destination address to receive funds (**required**)
 - `--dry-run`: Simulate actions without sending transactions (default: false)
 - `--force`: Skip confirmation prompt and proceed with transfers (default: false)
@@ -60,9 +62,13 @@ yarn start --private-key <PRIVATE_KEY> --out <DEST_ADDRESS> --skip-erc20
 - `--skip-erc20`: Skip transferring non-native (ERC20) tokens (default: false)
 
 ## Safety Notes
-- **Always test with `--dry-run` first!**
-- The tool will prompt for confirmation before sending real transactions unless `--force` is used.
-- All actions and errors are logged to the console.
+
+This tool moves funds irreversibly, so it is built to be hard to misfire:
+
+- **`--dry-run` simulates every transfer** — balances, amounts and destinations — without sending anything. Always run it first.
+- **A confirmation prompt lists every chain about to be swept** and the destination address, and requires typing `yes`. `--force` skips it, and is an explicit opt-out rather than a default.
+- **`--max-gas-price` skips chains where gas has spiked**, so a sweep during a congestion spike does not burn value in fees.
+- **Every action and error is logged** to the console.
 
 ## License
 MIT

@@ -1,7 +1,9 @@
 {
+  "name": "evm-wallet-sweeper",
+  "description": "CLI for decommissioning operational wallets: sweeps all token and native balances from an EOA across EVM chains to a single destination.",
   "main": "dist/index.js",
   "bin": {
-    "drain-wallet": "dist/index.js"
+    "sweep-wallet": "dist/index.js"
   },
   "scripts": {
     "start": "ts-node src/index.ts"
