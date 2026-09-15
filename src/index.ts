@@ -32,9 +32,9 @@ const opts = program.opts();
 
 // Validate DEFAULT_DESTINATION is set
 if (!DEFAULT_DESTINATION || DEFAULT_DESTINATION.trim() === '') {
-  console.error('❌ Error: DEFAULT_DESTINATION_WALLET environment variable is not set');
+  console.error('\n❌ Error: DEFAULT_DESTINATION_WALLET environment variable is not set');
   console.error('Please set it in your .env file:');
-  console.error('DEFAULT_DESTINATION_WALLET=0x...');
+  console.error('DEFAULT_DESTINATION_WALLET=0x...\n');
   process.exit(1);
 }
 
@@ -86,7 +86,7 @@ async function dryRunSweep(chain: any, rpcUrl: string, tokens: any[], wallet: Wa
           const decimals = token.decimals || (await contract.decimals());
           const symbol = token.symbol || (await contract.symbol());
           const formatted = formatUnits(balance, decimals);
-          console.log(`  [DRY-RUN] Would send ${formatted} ${symbol} to ${outAddress}`);
+          console.log(`  [DRY-RUN] Would send ${formatted} ${symbol}`);
         }
       } catch (err) {
         console.warn(`  [WARN] Could not check token ${token.symbol || token.address}:`, (err as Error).message);
@@ -113,7 +113,9 @@ async function dryRunSweep(chain: any, rpcUrl: string, tokens: any[], wallet: Wa
     if (balance > totalGasCost) {
       const sendAmount = balance - totalGasCost;
       const formatted = formatEther(sendAmount);
-      console.log(`  [DRY-RUN] Would send ${formatted} ${nativeToken ? nativeToken.symbol : 'ETH'} (native) to ${outAddress}`);
+      console.log(
+        `  [DRY-RUN] Would send ${formatted} ${nativeToken ? nativeToken.symbol : 'ETH'} (native)`
+      );
     } else {
       console.log('  Not enough native token to cover gas cost.');
     }
@@ -125,8 +127,6 @@ async function dryRunSweep(chain: any, rpcUrl: string, tokens: any[], wallet: Wa
 async function confirmProceed(chains: any[]) {
   const rl = readline.createInterface({ input, output });
   console.log('\n🌊 WALLET SWEEP - CONFIRMATION REQUIRED\n');
-  console.log('You are about to sweep funds from:');
-  console.log(`\nDestination: ${outAddress}\n`);
   console.log('Chains to sweep:');
   for (const chain of chains) {
     console.log(`  • ${chain.name || `Chain ${chain.chainId}`}`);
@@ -141,7 +141,7 @@ async function transferAll(chain: any, rpcUrl: string, tokens: any[], wallet: Wa
   const connectedWallet = wallet.connect(provider);
   const address = await connectedWallet.getAddress();
   console.log(`\n[${chain.chainId}] ${chain.name || 'Unknown Chain'}`);
-  console.log(`  Wallet: ${address}`);
+  console.log(`  Source: ${address}`);
 
   let gasPrice: bigint | undefined;
   if (maxGasPriceGwei !== undefined) {
@@ -172,7 +172,7 @@ async function transferAll(chain: any, rpcUrl: string, tokens: any[], wallet: Wa
           const decimals = token.decimals || (await contract.decimals());
           const symbol = token.symbol || (await contract.symbol());
           const formatted = formatUnits(balance, decimals);
-          console.log(`  Sending ${formatted} ${symbol} to ${outAddress}...`);
+          console.log(`  Sending ${formatted} ${symbol}`);
           const tx = await contract.transfer(outAddress, balance, gasPrice ? { gasPrice } : {});
           console.log(`    [TX] ${tx.hash}`);
           await tx.wait();
@@ -204,7 +204,7 @@ async function transferAll(chain: any, rpcUrl: string, tokens: any[], wallet: Wa
     if (balance > totalGasCost) {
       const sendAmount = balance - totalGasCost;
       const formatted = formatEther(sendAmount);
-      console.log(`  Sending ${formatted} ${nativeToken ? nativeToken.symbol : 'ETH'} (native) to ${outAddress}...`);
+      console.log(`  Sending ${formatted} ${nativeToken ? nativeToken.symbol : 'ETH'} (native)`);
       const tx = await connectedWallet.sendTransaction({
         to: outAddress,
         value: sendAmount,
@@ -223,6 +223,8 @@ async function transferAll(chain: any, rpcUrl: string, tokens: any[], wallet: Wa
 
 (async () => {
   try {
+    console.log('\n🌊 EVM WALLET SWEEPER\n');
+
     const { everclear, rpcs } = await fetchConfigs();
     const evmChains = getEvmChains(everclear);
     const wallet = new Wallet(opts.privateKey);
@@ -249,9 +251,9 @@ async function transferAll(chain: any, rpcUrl: string, tokens: any[], wallet: Wa
         await transferAll(chain, rpcUrl, tokens, wallet, opts.maxGasPrice);
       }
     }
-    console.log('\n✅ Sweep complete!');
+    console.log('\n✅ Sweep complete!\n');
   } catch (err) {
-    console.error('❌ Error:', err);
+    console.error('\n❌ Error:', err);
     process.exit(1);
   }
 })();
