@@ -1,77 +1,252 @@
-# EVM Wallet Sweeper
+# EVM Wallet Sweeper - Web dApp Edition
 
-A CLI for decommissioning operational wallets. Sweeps all token and native balances from an EOA (Externally Owned Account) across every EVM chain in the shared chain config into a single destination address — with a dry-run mode, a confirmation prompt, and a max-gas-price guard.
-
-Built to retire and consolidate operational wallets safely: rotating a key, winding down a deployment, or collecting scattered balances back to one address without checking twenty explorers by hand.
+A modern web application for sweeping all tokens and native balances from an EOA (Externally Owned Account) across multiple EVM-compatible chains to a single destination address.
 
 ## Features
-- 🔗 **Multi-chain**: Supports all EVM chains defined in [everclear.json](https://raw.githubusercontent.com/connext/chaindata/main/everclear.json)
-- 🪙 **Token + Native**: Transfers all non-native tokens first, then the native token
-- 🧪 **Dry-run mode**: Simulate all actions without sending transactions (`--dry-run`)
-- 🛡️ **Safety features**:
-  - Confirmation prompt before sending real transactions
-  - `--force` flag to skip confirmation
-  - `--max-gas-price` to skip chains with high gas
-- ⚡ **Automatic RPC selection**: Uses up-to-date RPCs from [chainlist.org](https://chainlist.org/rpcs.json)
-- 🚦 **Logs all actions and errors**
 
-## Requirements
-- Node.js 18+
-- Yarn (for monorepo/workspace install)
-- Ethers v6
+✨ **Modern Web UI** - Built with React, Vite, and Tailwind CSS
+
+🔗 **dApp Integration** - Connect with MetaMask, WalletConnect, and other EVM wallets via RainbowKit
+
+⛓️ **Multi-Chain Support** - Sweep from Ethereum, Polygon, Optimism, Arbitrum, Base, Avalanche, and more
+
+💰 **Token Detection** - Automatically detects and displays all ERC20 tokens and native coins
+
+🔒 **Smart Contract** - Secure sweep contract for single-transaction approval
+
+🚀 **Fast & Efficient** - Minimal gas fees with optimized transaction batching
+
+## Architecture
+
+```
+┌─────────────────────────────────────────┐
+│     Web UI (React + Vite)               │
+│  - Connect Wallet (RainbowKit)          │
+│  - Balance Checker                      │
+│  - Sweep Form                           │
+└──────────────────┬──────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────┐
+│     Backend (Express + TypeScript)      │
+│  - Balance API                          │
+│  - Sweep Coordinator                    │
+│  - Chain Configuration                  │
+└──────────────────┬──────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────┐
+│     Smart Contract (WalletSweeper.sol)  │
+│  - Token Transfers                      │
+│  - Native Currency Sweep                │
+│  - Single-Signature Approval            │
+└─────────────────────────────────────────┘
+```
 
 ## Installation
-From the monorepo root:
+
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- A Web3 wallet (MetaMask, Trust Wallet, etc.)
+
+### Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/hom1109000-droid/evm-wallet-sw.git
+   cd evm-wallet-sw
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Configure environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env and add your WalletConnect Project ID
+   ```
+
+4. **Get WalletConnect Project ID**
+   - Go to https://cloud.walletconnect.com/
+   - Sign up/login
+   - Create a new project
+   - Copy the Project ID to `.env`
+
+## Development
+
+### Run both frontend and backend
 ```bash
-yarn install
+npm run dev:all
+```
+
+This starts:
+- Frontend: http://localhost:3000
+- Backend: http://localhost:3001
+
+### Run only frontend
+```bash
+npm run dev
+```
+
+### Run only backend
+```bash
+npm run server
 ```
 
 ## Usage
 
-### Dry-run (no transactions sent)
-```bash
-yarn start --private-key <PRIVATE_KEY> --out <DEST_ADDRESS> --dry-run
+1. **Connect Your Wallet**
+   - Click "Connect Wallet" button
+   - Select your preferred wallet (MetaMask, WalletConnect, etc.)
+   - Approve the connection
+
+2. **Check Balances**
+   - Click "Check Balances" to scan all chains
+   - View your tokens and native coins
+
+3. **Configure Sweep**
+   - Enter destination address
+   - Select chains to sweep from
+   - Or use "Select All" for all chains
+
+4. **Execute Sweep**
+   - Click "🔄 Sweep Wallet"
+   - Confirm in your wallet
+   - Monitor transaction progress
+
+## Smart Contract Functions
+
+### sweep()
+Sweeps multiple ERC20 tokens and native currency in a single transaction.
+
+```solidity
+function sweep(
+    address[] calldata tokens,
+    address payable destination,
+    uint256 minGasBuffer
+) external
 ```
 
-### Real transfers (with confirmation prompt)
-```bash
-yarn start --private-key <PRIVATE_KEY> --out <DEST_ADDRESS>
+### sweepNative()
+Sweeps only native currency to destination.
+
+```solidity
+function sweepNative(
+    address payable destination,
+    uint256 minGasBuffer
+) external
 ```
 
-### Real transfers (skip confirmation)
-```bash
-yarn start --private-key <PRIVATE_KEY> --out <DEST_ADDRESS> --force
+### sweepToken()
+Sweeps a single ERC20 token to destination.
+
+```solidity
+function sweepToken(
+    address token,
+    address payable destination
+) external
 ```
 
-### Limit max gas price (in gwei)
-```bash
-yarn start --private-key <PRIVATE_KEY> --out <DEST_ADDRESS> --max-gas-price 30
+## API Endpoints
+
+### GET `/api/balances/:address`
+Fetch balances across all EVM chains
+
+**Response:**
+```json
+{
+  "1": {
+    "nativeBalance": "1.5",
+    "nativeSymbol": "ETH",
+    "tokens": [
+      {
+        "address": "0x...",
+        "symbol": "USDC",
+        "balance": "1000",
+        "decimals": 6
+      }
+    ]
+  }
+}
 ```
 
-### Skip ERC20 (non-native) token transfers
-```bash
-yarn start --private-key <PRIVATE_KEY> --out <DEST_ADDRESS> --skip-erc20
+### POST `/api/sweep`
+Initiate wallet sweep
+
+**Request:**
+```json
+{
+  "sourceAddress": "0x...",
+  "destinationAddress": "0x...",
+  "chains": [1, 137, 10]
+}
 ```
 
-## CLI Options
-- `-k, --private-key <key>`: Private key of the EOA to sweep (**required**)
-- `-o, --out <address>`: Destination address to receive funds (**required**)
-- `--dry-run`: Simulate actions without sending transactions (default: false)
-- `--force`: Skip confirmation prompt and proceed with transfers (default: false)
-- `--max-gas-price <gwei>`: Maximum gas price (in gwei) for transactions (optional)
-- `--skip-erc20`: Skip transferring non-native (ERC20) tokens (default: false)
+**Response:**
+```json
+{
+  "success": true,
+  "txHash": "0x...",
+  "message": "Sweep initiated"
+}
+```
 
-## Safety Notes
+## Configuration
 
-This tool moves funds irreversibly, so it is built to be hard to misfire:
+### Supported Chains
 
-- **`--dry-run` simulates every transfer** — balances, amounts and destinations — without sending anything. Always run it first.
-- **A confirmation prompt lists every chain about to be swept** and the destination address, and requires typing `yes`. `--force` skips it, and is an explicit opt-out rather than a default.
-- **`--max-gas-price` skips chains where gas has spiked**, so a sweep during a congestion spike does not burn value in fees.
-- **Every action and error is logged** to the console.
+Default chains in `src/ui/wagmi.ts`:
+- Ethereum (1)
+- Sepolia (11155111)
+- Polygon (137)
+- Optimism (10)
+- Arbitrum (42161)
+- Base (8453)
+
+Add more chains by modifying the `chains` array in the wagmi config.
+
+## Security Considerations
+
+⚠️ **Important Security Notes:**
+
+1. **Private Keys**: Never enter your private key in the web interface
+2. **Smart Contract**: Audit the contract before deploying to mainnet
+3. **Gas Limits**: The contract includes gas buffer protection
+4. **Approvals**: Always verify token approvals before signing
+5. **Destination**: Double-check destination address before confirming
+
+## Troubleshooting
+
+### "No RPC found for this chain"
+The balance checker couldn't find an RPC endpoint for that chain. Check your internet connection.
+
+### "Gas price too high"
+You can set a max gas price option in the sweep configuration.
+
+### Transaction stuck
+Check the transaction hash on a block explorer. You may need to increase gas price or wait for network congestion to decrease.
+
+## Building for Production
+
+```bash
+# Build frontend
+npm run build
+
+# Output will be in dist-ui/
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
-MIT
 
-## Attribution
-Everclear Team 
+MIT License - see LICENSE file for details
+
+## Disclaimer
+
+This tool is provided as-is. Use at your own risk. Always test on testnet first before using on mainnet. The developers are not responsible for any loss of funds.
