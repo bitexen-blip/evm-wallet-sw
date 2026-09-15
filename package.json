@@ -3,7 +3,7 @@
   "description": "Web dApp for sweeping all tokens and native balances from an EOA across EVM chains",
   "version": "2.0.0",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/server/index.js",
   "bin": {
     "sweep-wallet": "dist/index.js"
   },
@@ -12,14 +12,14 @@
     "npm": ">=9.0.0"
   },
   "scripts": {
-    "start": "node --loader tsx src/server/index.ts",
+    "start": "node dist/server/index.js",
     "dev": "vite",
     "build": "vite build",
     "build:all": "vite build && npm run server:build",
-    "server:build": "tsc src/server/index.ts --outDir dist --declaration",
+    "server:build": "tsc src/server/index.ts --outDir dist --declaration --module esnext --target esnext",
     "preview": "vite preview",
     "server": "tsx src/server/index.ts",
-    "server:prod": "node dist/server/index.js",
+    "server:prod": "npm run build:all && node dist/server/index.js",
     "dev:all": "concurrently \"npm run server\" \"npm run dev\"",
     "lint": "tsc --noEmit",
     "type-check": "tsc --noEmit"
