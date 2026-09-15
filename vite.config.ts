@@ -15,8 +15,12 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist-ui',
+    sourcemap: false,
+    minify: 'terser',
   },
   define: {
-    'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'http://localhost:3001'),
+    'process.env.VITE_API_URL': JSON.stringify(
+      process.env.VITE_API_URL || (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:3001')
+    ),
   },
 });
