@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { JsonRpcProvider, formatEther } from 'ethers';
 import axios from 'axios';
 import dotenv from 'dotenv';
@@ -15,8 +17,16 @@ import { CHAIN_CONFIG, SUPPORTED_CHAIN_IDS } from '../config/chains';
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
-app.use(cors());
+
+// Middleware
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  credentials: true,
+}));
 app.use(express.json());
 
 const EVERCLEAR_CONFIG_URL = 'https://raw.githubusercontent.com/connext/chaindata/main/everclear.json';
@@ -67,6 +77,11 @@ function getRpcForChain(chainId: number, rpcs: any): string | null {
   }
   return null;
 }
+
+// GET /api/health - Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // GET /api/balances/:address - Fetch balances across all chains
 app.get('/api/balances/:address', async (req, res) => {
@@ -226,11 +241,6 @@ app.post('/api/sweep', async (req, res) => {
   }
 });
 
-// GET /api/health - Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
 // GET /api/chains - Get supported chains
 app.get('/api/chains', (req, res) => {
   const chains = SUPPORTED_CHAIN_IDS.map((chainId) => ({
@@ -241,8 +251,20 @@ app.get('/api/chains', (req, res) => {
   res.json(chains);
 });
 
+// Serve static frontend files in production
+if (process.env.NODE_ENV === 'production') {
+  const frontendPath = path.join(__dirname, '../../dist-ui');
+  app.use(express.static(frontendPath));
+  
+  // Fallback to index.html for client-side routing
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendPath, 'index.html'));
+  });
+}
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Supported chains: ${SUPPORTED_CHAIN_IDS.join(', ')}`);
+  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
