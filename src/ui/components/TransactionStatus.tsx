@@ -24,10 +24,10 @@ function TransactionRow({ tx }: { tx: TransactionState }) {
   const isPending = !receipt && tx.status !== 'failed';
 
   return (
-    <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700 hover:border-purple-500/50 transition">
+    <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700 hover:border-green-500/50 transition">
       <div className="flex items-start justify-between mb-2">
         <div>
-          <p className="text-sm font-semibold text-blue-300">{tx.chainName}</p>
+          <p className="text-sm font-semibold text-green-300">{tx.chainName}</p>
           <p className="text-xs text-gray-400">
             {isPending && '⏳ Pending...'}
             {isConfirmed && '✅ Confirmed'}
@@ -39,7 +39,7 @@ function TransactionRow({ tx }: { tx: TransactionState }) {
             href={explorerUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition"
+            className="text-xs px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded transition"
           >
             View ↗
           </a>
@@ -72,7 +72,7 @@ export default function TransactionStatus({ transactions }: TransactionStatusPro
   return (
     <div className="bg-gradient-to-r from-green-900/50 to-emerald-900/50 backdrop-blur border border-green-500/20 rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-green-300">📊 Transaction Status</h3>
+        <h3 className="text-lg font-bold text-green-300">🌊 Sweep In Progress</h3>
         <div className="text-xs text-gray-300 space-x-4">
           {pendingCount > 0 && <span>⏳ {pendingCount} pending</span>}
           {confirmedCount > 0 && <span className="text-green-400">✅ {confirmedCount} confirmed</span>}
@@ -87,8 +87,8 @@ export default function TransactionStatus({ transactions }: TransactionStatusPro
       </div>
 
       <div className="p-3 bg-blue-900/30 border border-blue-500/30 rounded text-xs text-blue-200">
-        💡 <span className="font-semibold">Tip:</span> Transactions may take time to be included in a block.
-        Check back later for confirmation or monitor on the block explorer.
+        💡 <span className="font-semibold">Tip:</span> Transactions may take time to be included in a block. Check back
+        later for confirmation or monitor on the block explorer.
       </div>
     </div>
   );
