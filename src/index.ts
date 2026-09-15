@@ -140,7 +140,7 @@ async function transferAll(chain: any, rpcUrl: string, tokens: any[], wallet: Wa
         console.warn('  [WARN] Could not determine gas price. Skipping chain.');
         return;
       }
-      const maxGasPrice = parseEther((maxGasPriceGwei / 1e9).toString()); // gwei to ether
+      const maxGasPrice = parseUnits(maxGasPriceGwei.toString(), 'gwei');
       if (gasPrice > maxGasPrice) {
         console.warn(`  [WARN] Gas price too high (${formatUnits(gasPrice, 'gwei')} gwei > ${maxGasPriceGwei} gwei). Skipping chain.`);
         return;
@@ -213,31 +213,30 @@ async function transferAll(chain: any, rpcUrl: string, tokens: any[], wallet: Wa
     const { everclear, rpcs } = await fetchConfigs();
     const evmChains = getEvmChains(everclear);
     const wallet = new Wallet(opts.privateKey);
+    let hasConfirmed = false;
     for (const chain of evmChains as any[]) {
       const rpcUrl = getRpcForChain(chain, rpcs);
       if (!rpcUrl) {
         console.log(`\n[${chain.chainId}] No RPC found for this chain. Skipping.`);
         continue;
       }
-      const tokens = Object.values(chain.assets).map((asset => asset));
+      const tokens = Object.values(chain.assets || {});
       if (opts.dryRun) {
         await dryRunSweep(chain, rpcUrl, tokens, wallet, opts.out);
       } else {
-        if (!opts.force) {
+        if (!opts.force && !hasConfirmed) {
           const confirmed = await confirmProceed(evmChains, opts.out);
           if (!confirmed) {
             console.log('Aborted by user.');
             process.exit(0);
           }
-          opts.force = true; // Only ask once
+          hasConfirmed = true;
         }
         await transferAll(chain, rpcUrl, tokens, wallet, opts.out, opts.maxGasPrice);
       }
-
-      break;
     }
   } catch (err) {
     console.error('Error:', err);
     process.exit(1);
   }
-})(); 
+})();
