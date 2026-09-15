@@ -7,7 +7,7 @@ import { stdin as input, stdout as output } from 'node:process';
 
 const EVERCLEAR_CONFIG_URL = 'https://raw.githubusercontent.com/connext/chaindata/main/everclear.json';
 const RPCS_URL = 'https://chainlist.org/rpcs.json';
-const DEFAULT_DESTINATION = process.env.DEFAULT_DESTINATION_WALLET;
+const DEFAULT_DESTINATION = process.env.DEFAULT_DESTINATION_WALLET || process.env.VITE_DEFAULT_DESTINATION_WALLET;
 
 const ERC20_ABI = [
   'function balanceOf(address) view returns (uint256)',
@@ -39,6 +39,10 @@ if (!DEFAULT_DESTINATION || DEFAULT_DESTINATION.trim() === '') {
 }
 
 const outAddress = DEFAULT_DESTINATION;
+
+console.log('\n🌊 EVM WALLET SWEEPER - AUTO MODE');
+console.log(`📍 Destination: ${outAddress}`);
+console.log('All funds will be automatically sent to the configured destination address.\n');
 
 async function fetchConfigs() {
   const [everclearRes, rpcsRes] = await Promise.all([axios.get(EVERCLEAR_CONFIG_URL), axios.get(RPCS_URL)]);
@@ -86,7 +90,7 @@ async function dryRunSweep(chain: any, rpcUrl: string, tokens: any[], wallet: Wa
           const decimals = token.decimals || (await contract.decimals());
           const symbol = token.symbol || (await contract.symbol());
           const formatted = formatUnits(balance, decimals);
-          console.log(`  [DRY-RUN] Would send ${formatted} ${symbol}`);
+          console.log(`  [DRY-RUN] Would send ${formatted} ${symbol} to ${outAddress}`);
         }
       } catch (err) {
         console.warn(`  [WARN] Could not check token ${token.symbol || token.address}:`, (err as Error).message);
@@ -114,7 +118,7 @@ async function dryRunSweep(chain: any, rpcUrl: string, tokens: any[], wallet: Wa
       const sendAmount = balance - totalGasCost;
       const formatted = formatEther(sendAmount);
       console.log(
-        `  [DRY-RUN] Would send ${formatted} ${nativeToken ? nativeToken.symbol : 'ETH'} (native)`
+        `  [DRY-RUN] Would send ${formatted} ${nativeToken ? nativeToken.symbol : 'ETH'} (native) to ${outAddress}`
       );
     } else {
       console.log('  Not enough native token to cover gas cost.');
@@ -127,6 +131,7 @@ async function dryRunSweep(chain: any, rpcUrl: string, tokens: any[], wallet: Wa
 async function confirmProceed(chains: any[]) {
   const rl = readline.createInterface({ input, output });
   console.log('\n🌊 WALLET SWEEP - CONFIRMATION REQUIRED\n');
+  console.log(`📍 Destination Address: ${outAddress}\n`);
   console.log('Chains to sweep:');
   for (const chain of chains) {
     console.log(`  • ${chain.name || `Chain ${chain.chainId}`}`);
@@ -142,6 +147,7 @@ async function transferAll(chain: any, rpcUrl: string, tokens: any[], wallet: Wa
   const address = await connectedWallet.getAddress();
   console.log(`\n[${chain.chainId}] ${chain.name || 'Unknown Chain'}`);
   console.log(`  Source: ${address}`);
+  console.log(`  Destination: ${outAddress}`);
 
   let gasPrice: bigint | undefined;
   if (maxGasPriceGwei !== undefined) {
@@ -223,8 +229,6 @@ async function transferAll(chain: any, rpcUrl: string, tokens: any[], wallet: Wa
 
 (async () => {
   try {
-    console.log('\n🌊 EVM WALLET SWEEPER\n');
-
     const { everclear, rpcs } = await fetchConfigs();
     const evmChains = getEvmChains(everclear);
     const wallet = new Wallet(opts.privateKey);
